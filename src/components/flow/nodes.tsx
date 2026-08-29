@@ -1,0 +1,63 @@
+import { Handle, Position, NodeProps } from '@xyflow/react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MessageSquare, Zap, Split } from 'lucide-react'
+
+export function TriggerNode({ data }: NodeProps) {
+  return (
+    <Card className="w-[250px] border-green-500/50 shadow-sm">
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-md text-green-600 dark:text-green-400">
+          <Zap className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm font-semibold">Trigger</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-zinc-500">
+          {data.label as string || 'When a user sends a message'}
+        </p>
+      </CardContent>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-zinc-400" />
+    </Card>
+  )
+}
+
+export function MessageNode({ data }: NodeProps) {
+  return (
+    <Card className="w-[250px] border-blue-500/50 shadow-sm">
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-zinc-400" />
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-md text-blue-600 dark:text-blue-400">
+          <MessageSquare className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm font-semibold">Send Message</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-zinc-500 truncate">
+          {data.label as string || 'Select a template...'}
+        </p>
+      </CardContent>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-zinc-400" />
+    </Card>
+  )
+}
+
+export function ConditionNode({ data }: NodeProps) {
+  return (
+    <Card className="w-[250px] border-orange-500/50 shadow-sm">
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-zinc-400" />
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-md text-orange-600 dark:text-orange-400">
+          <Split className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm font-semibold">Condition</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-zinc-500">
+          {data.label as string || 'If message contains...'}
+        </p>
+      </CardContent>
+      <Handle type="source" position={Position.Bottom} id="true" className="w-3 h-3 bg-green-500 left-1/4" />
+      <Handle type="source" position={Position.Bottom} id="false" className="w-3 h-3 bg-red-500 left-3/4" />
+    </Card>
+  )
+}
