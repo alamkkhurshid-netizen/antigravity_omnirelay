@@ -37,7 +37,7 @@ export default async function KnowledgePage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         {/* Upload Pane */}
         <Card className="h-fit border-blue-200 dark:border-blue-900 bg-blue-50/30 dark:bg-blue-950/20">
-          <form action={uploadDocument}>
+          <form action={uploadDocument as any}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
                 <BrainCircuit className="w-5 h-5" />
@@ -90,7 +90,7 @@ export default async function KnowledgePage() {
                         {doc.filename}
                       </CardTitle>
                     </div>
-                    <form action={deleteDocument}>
+                    <form action={deleteDocument as any}>
                       <input type="hidden" name="documentId" value={doc.id} />
                       <Button type="submit" variant="ghost" size="icon" className="h-6 w-6 text-zinc-400 hover:text-red-500">
                         <Trash2 className="w-4 h-4" />

@@ -106,7 +106,7 @@ export default async function DashboardPage() {
                   Connect WhatsApp Business Account
                 </span>
                 {!isWaConnected && (
-                  <Button variant="link" asChild className="ml-auto text-blue-600 p-0 h-auto">
+                  <Button variant="link" className="ml-auto text-blue-600 p-0 h-auto">
                     <Link href="/dashboard/settings">Connect &rarr;</Link>
                   </Button>
                 )}
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
                   Create your first automation Flow
                 </span>
                 {!isFlowCreated && (
-                  <Button variant="link" asChild className="ml-auto text-blue-600 p-0 h-auto">
+                  <Button variant="link" className="ml-auto text-blue-600 p-0 h-auto">
                     <Link href="/dashboard/flows">Create Flow &rarr;</Link>
                   </Button>
                 )}

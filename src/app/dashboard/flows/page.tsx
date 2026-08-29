@@ -25,7 +25,7 @@ export default async function FlowsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Create New Flow Card */}
         <Card className="border-dashed border-2 flex flex-col justify-center bg-zinc-50/50 dark:bg-zinc-950/50">
-          <form action={createFlow}>
+          <form action={createFlow as any}>
             <CardHeader>
               <CardTitle>Create New Flow</CardTitle>
               <CardDescription>Design a new automated WhatsApp workflow.</CardDescription>
@@ -54,7 +54,7 @@ export default async function FlowsPage() {
               </p>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
+              <Button variant="outline" className="w-full">
                 <Link href={`/dashboard/flows/${flow.id}`}>Open Builder</Link>
               </Button>
             </CardFooter>

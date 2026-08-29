@@ -24,7 +24,7 @@ export default async function FlowPage({ params }: { params: { id: string } }) {
   return (
     <div className="h-full flex flex-col space-y-4">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="ghost" size="icon">
           <Link href="/dashboard/flows">
             <ChevronLeft className="w-5 h-5" />
           </Link>

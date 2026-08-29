@@ -36,7 +36,7 @@ export default async function DeveloperPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         {/* Left Pane: Generator */}
         <Card className="h-fit">
-          <form action={generateApiKey}>
+          <form action={generateApiKey as any}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Key className="w-5 h-5" />
@@ -81,7 +81,7 @@ export default async function DeveloperPage() {
                           </code>
                         </div>
                       </div>
-                      <form action={revokeApiKey}>
+                      <form action={revokeApiKey as any}>
                         <input type="hidden" name="keyId" value={key.id} />
                         <Button type="submit" variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50">
                           <Trash2 className="w-4 h-4" />

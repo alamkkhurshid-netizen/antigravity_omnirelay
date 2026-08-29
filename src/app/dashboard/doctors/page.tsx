@@ -33,7 +33,7 @@ export default async function DoctorsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Add New Doctor Card */}
         <Card className="border-dashed border-2 flex flex-col justify-center bg-zinc-50/50 dark:bg-zinc-950/50">
-          <form action={createDoctor}>
+          <form action={createDoctor as any}>
             <CardHeader>
               <CardTitle>Add Doctor</CardTitle>
               <CardDescription>Add a new practitioner to your clinic.</CardDescription>

@@ -34,7 +34,7 @@ export default async function OnboardingPage() {
             Welcome to Omnirelay! Let's start by creating a workspace for your business.
           </CardDescription>
         </CardHeader>
-        <form action={createTenant}>
+        <form action={createTenant as any}>
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="businessName">Business Name</Label>

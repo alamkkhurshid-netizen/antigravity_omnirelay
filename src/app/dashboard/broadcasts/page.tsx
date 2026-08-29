@@ -41,7 +41,7 @@ export default async function BroadcastsPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
         {/* Composer Left Pane */}
         <Card className="h-fit">
-          <form action={sendBroadcast}>
+          <form action={sendBroadcast as any}>
             <CardHeader>
               <CardTitle>New Campaign</CardTitle>
               <CardDescription>Blast a WhatsApp template to your audience.</CardDescription>
