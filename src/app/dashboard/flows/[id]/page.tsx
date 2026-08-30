@@ -5,14 +5,15 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-export default async function FlowPage({ params }: { params: { id: string } }) {
+export default async function FlowPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
+  const { id } = await params
 
   // Verify access and get flow data
   const { data: flow, error } = await supabase
     .from('flows')
     .select('*, flow_versions(nodes, edges)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !flow) {
