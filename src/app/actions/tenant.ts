@@ -43,16 +43,18 @@ const FLOW_TEMPLATES: Record<string, { name: string, nodes: any[], edges: any[] 
     name: 'Retail Order Flow',
     nodes: [
       { id: 'trigger-1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'When customer messages' } },
-      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '🛍️ Welcome to {business}!\n\n1️⃣ Browse products\n2️⃣ Track my order\n3️⃣ Talk to support' } },
+      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '🛍️ Welcome to {business}!\n\n1️⃣ Order Clothing\n2️⃣ Track my order\n3️⃣ Support' } },
       { id: 'cond-order', type: 'condition', position: { x: 250, y: 370 }, data: { label: 'order' } },
-      { id: 'msg-catalog', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Please share your order number and we\'ll check the status for you!' } },
+      { id: 'msg-catalog', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Great! Please reply with the item name and size you would like to order.' } },
+      { id: 'db-action', type: 'databaseAction', position: { x: 80, y: 680 }, data: { label: 'Save Order', targetTable: 'retail_orders' } },
       { id: 'msg-fallback', type: 'message', position: { x: 450, y: 530 }, data: { label: 'Thanks for your message! Our support team will be with you shortly.' } },
     ],
     edges: [
       { id: 'e1', source: 'trigger-1', target: 'msg-welcome' },
       { id: 'e2', source: 'msg-welcome', target: 'cond-order' },
       { id: 'e3', source: 'cond-order', target: 'msg-catalog', sourceHandle: 'true' },
-      { id: 'e4', source: 'cond-order', target: 'msg-fallback', sourceHandle: 'false' },
+      { id: 'e4', source: 'msg-catalog', target: 'db-action' },
+      { id: 'e5', source: 'cond-order', target: 'msg-fallback', sourceHandle: 'false' },
     ]
   },
   health_diagnostic_lab: {

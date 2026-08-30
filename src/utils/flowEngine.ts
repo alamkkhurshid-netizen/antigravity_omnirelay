@@ -256,7 +256,7 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
         nextNodeId = edge ? edge.target : null
       }
       else if (currentNode.type === 'databaseAction' || currentNode.type === 'DatabaseActionNode') {
-        const targetTable = currentNode.data?.table as string || 'restaurant_bookings'
+        const targetTable = currentNode.data?.targetTable || currentNode.data?.table || 'restaurant_bookings'
         
         try {
           if (targetTable === 'restaurant_bookings') {
@@ -295,6 +295,16 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
                 status: 'pending'
               })
             }
+          } else if (targetTable === 'retail_orders') {
+            const item = state.variables['input'] || 'Unknown Item'
+            
+            await supabase.from('retail_orders').insert({
+              tenant_id: tenantId,
+              customer_phone: contactPhone,
+              order_details: { items: [item] },
+              total_amount: 0.00,
+              status: 'pending'
+            })
           }
           console.log(`Successfully saved to ${targetTable}`)
         } catch (err) {
