@@ -255,6 +255,56 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
         const edge = edges.find(e => e.source === currentNode.id)
         nextNodeId = edge ? edge.target : null
       }
+      else if (currentNode.type === 'databaseAction' || currentNode.type === 'DatabaseActionNode') {
+        const targetTable = currentNode.data?.table as string || 'restaurant_bookings'
+        
+        try {
+          if (targetTable === 'restaurant_bookings') {
+            // Needs date, time, party_size
+            const date = state.variables['date'] || new Date().toISOString().split('T')[0]
+            const time = state.variables['time'] || '19:00:00'
+            const party_size = parseInt(state.variables['party_size'] || '2', 10)
+            
+            await supabase.from('restaurant_bookings').insert({
+              tenant_id: tenantId,
+              contact_id: contactId,
+              booking_date: date,
+              booking_time: time,
+              party_size: party_size,
+              status: 'pending'
+            })
+          } else if (targetTable === 'clinic_appointments') {
+            // Needs date, time, doctor_id
+            const date = state.variables['date'] || new Date().toISOString().split('T')[0]
+            const time = state.variables['time'] || '10:00:00'
+            
+            // For MVP we can just fetch the first doctor if doctor_id isn't in state
+            let doctorId = state.variables['doctor_id']
+            if (!doctorId) {
+              const { data: doc } = await supabase.from('doctors').select('id').eq('tenant_id', tenantId).limit(1).single()
+              doctorId = doc?.id
+            }
+
+            if (doctorId) {
+              await supabase.from('clinic_appointments').insert({
+                tenant_id: tenantId,
+                contact_id: contactId,
+                doctor_id: doctorId,
+                appointment_date: date,
+                appointment_time: time,
+                status: 'pending'
+              })
+            }
+          }
+          console.log(`Successfully saved to ${targetTable}`)
+        } catch (err) {
+          console.error(`Failed to save to ${targetTable}:`, err)
+        }
+
+        // Move to next node
+        const edge = edges.find(e => e.source === currentNode.id)
+        nextNodeId = edge ? edge.target : null
+      }
 
       // Advance
       currentNodeId = nextNodeId

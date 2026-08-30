@@ -2,7 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Wallet, Zap, CreditCard, ShieldCheck } from 'lucide-react'
-import { upgradePlan, addWalletFunds } from '@/app/actions/billing'
+import { upgradePlan } from '@/app/actions/billing'
+import { RazorpayCheckout } from '@/components/billing/RazorpayCheckout'
 
 export default async function BillingPage() {
   const supabase = await createClient()
@@ -67,18 +68,19 @@ export default async function BillingPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <form action={addWalletFunds}>
-              <input type="hidden" name="amount" value="500" />
-              <Button type="submit" variant="outline" className="gap-2">
-                <CreditCard className="w-4 h-4" /> Add ₹500
-              </Button>
-            </form>
-            <form action={addWalletFunds}>
-              <input type="hidden" name="amount" value="1000" />
-              <Button type="submit" variant="default" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                <Zap className="w-4 h-4" /> Recharge ₹1,000
-              </Button>
-            </form>
+            <RazorpayCheckout 
+              amountINR={500} 
+              buttonText="Add ₹500" 
+              variant="outline" 
+              icon="credit-card"
+            />
+            <RazorpayCheckout 
+              amountINR={1000} 
+              buttonText="Recharge ₹1,000" 
+              variant="default" 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              icon="zap"
+            />
           </div>
         </CardContent>
       </Card>

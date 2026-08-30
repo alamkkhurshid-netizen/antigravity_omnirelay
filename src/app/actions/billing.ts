@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import Razorpay from 'razorpay'
 
 export async function upgradePlan(formData: FormData) {
   const supabase = await createClient()
@@ -38,15 +39,13 @@ export async function upgradePlan(formData: FormData) {
   return { success: true }
 }
 
-export async function addWalletFunds(formData: FormData) {
+export async function createRazorpayOrder(amountINR: number) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  const amountStr = formData.get('amount') as string
-  const amount = parseFloat(amountStr)
-  if (isNaN(amount) || amount <= 0) return { error: 'Invalid amount' }
+  if (amountINR <= 0) return { error: 'Invalid amount' }
 
   const { data: members } = await supabase
     .from('tenant_members')
@@ -55,30 +54,37 @@ export async function addWalletFunds(formData: FormData) {
     .limit(1)
 
   if (!members || members.length === 0) return { error: 'No workspace found' }
-
   const tenantId = members[0].tenant_id
 
-  // Get current balance
-  const { data: wallet } = await supabase
-    .from('tenant_wallets')
-    .select('balance_inr')
-    .eq('tenant_id', tenantId)
-    .single()
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return { error: 'Razorpay keys not configured' }
+  }
 
-  const currentBalance = wallet ? parseFloat(wallet.balance_inr as unknown as string) : 0
-  const newBalance = currentBalance + amount
-
-  // Simulate successful Razorpay wallet recharge
-  const { error } = await supabase
-    .from('tenant_wallets')
-    .update({ 
-      balance_inr: newBalance,
-      updated_at: new Date().toISOString()
+  try {
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
     })
-    .eq('tenant_id', tenantId)
 
-  if (error) return { error: 'Failed to add funds' }
+    const options = {
+      amount: amountINR * 100, // Razorpay works in paise
+      currency: "INR",
+      receipt: `receipt_${tenantId}_${Date.now()}`,
+      notes: {
+        tenantId: tenantId
+      }
+    }
 
-  revalidatePath('/dashboard/billing')
-  return { success: true }
+    const order = await razorpay.orders.create(options)
+    
+    return {
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      keyId: process.env.RAZORPAY_KEY_ID
+    }
+  } catch (error) {
+    console.error('Razorpay Error:', error)
+    return { error: 'Failed to create payment order' }
+  }
 }
