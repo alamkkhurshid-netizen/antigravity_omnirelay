@@ -137,7 +137,6 @@ export function OnboardingForm() {
         )}
 
         <p className="text-xs text-zinc-500">We'll set up a starter automation flow tailored precisely to your specific business type.</p>
-        </div>
       </CardContent>
       <CardFooter>
         <Button className="w-full" type="submit" disabled={loading}>
