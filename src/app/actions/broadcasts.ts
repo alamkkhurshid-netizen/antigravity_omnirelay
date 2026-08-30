@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendWhatsAppMessage } from '@/utils/meta'
-import { debitWalletForMessage } from '@/utils/billing'
+import { debitWalletForMessage, checkWalletBalance } from '@/utils/billing'
 
 export async function sendBroadcast(formData: FormData) {
   const supabase = await createClient()
@@ -80,6 +80,13 @@ export async function sendBroadcast(formData: FormData) {
   let failedCount = 0
 
   for (const contact of contacts) {
+    const hasBalance = await checkWalletBalance(tenantId, 'marketing')
+    if (!hasBalance) {
+      console.error(`Broadcast stopped due to insufficient balance for tenant ${tenantId}`)
+      failedCount += (contacts.length - sentCount - failedCount) // mark remaining as failed
+      break
+    }
+
     try {
       await sendWhatsAppMessage(
         waConfig.phone_number_id,

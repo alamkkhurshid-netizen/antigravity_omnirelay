@@ -1,15 +1,36 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 
-export async function debitWalletForMessage(tenantId: string, messageId: string, category: 'utility' | 'marketing' | 'authentication' | 'service') {
+const PRICING = {
+  utility: 0.14,
+  marketing: 0.92,
+  authentication: 0.14,
+  service: 0.35
+}
+
+export async function checkWalletBalance(tenantId: string, category: 'utility' | 'marketing' | 'authentication' | 'service') {
   const supabase = createAdminClient()
   
-  // Example Meta pricing (INR)
-  const PRICING = {
-    utility: 0.14,
-    marketing: 0.92,
-    authentication: 0.14,
-    service: 0.35
+  const metaCost = PRICING[category] || 0.35
+  const markup = 1.2
+  const billedCost = metaCost * markup
+  
+  const { data: wallet, error } = await supabase
+    .from('tenant_wallets')
+    .select('balance_inr, free_quota_remaining')
+    .eq('tenant_id', tenantId)
+    .single()
+    
+  if (error || !wallet) return false
+  
+  if (wallet.free_quota_remaining > 0 && (category === 'utility' || category === 'service')) {
+    return true
   }
+  
+  return wallet.balance_inr >= billedCost
+}
+
+export async function debitWalletForMessage(tenantId: string, messageId: string, category: 'utility' | 'marketing' | 'authentication' | 'service') {
+  const supabase = createAdminClient()
   
   const metaCost = PRICING[category] || 0.35
   const markup = 1.2 // 20% markup

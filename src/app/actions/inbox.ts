@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { sendWhatsAppMessage } from '@/utils/meta'
-import { debitWalletForMessage } from '@/utils/billing'
+import { debitWalletForMessage, checkWalletBalance } from '@/utils/billing'
 import { revalidatePath } from 'next/cache'
 
 export async function getMessages(contactId: string) {
@@ -54,6 +54,12 @@ export async function sendManualReply(contactId: string, messageText: string) {
 
   if (!waConfig || !waConfig.phone_number_id || !waConfig.system_user_token) {
     return { error: 'WhatsApp not connected. Go to Settings to connect.' }
+  }
+
+  // Check balance before sending
+  const hasBalance = await checkWalletBalance(tenantId, 'service')
+  if (!hasBalance) {
+    return { error: 'Insufficient wallet balance to send message.' }
   }
 
   try {

@@ -1,6 +1,6 @@
 import { Handle, Position, NodeProps } from '@xyflow/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare, Zap, Split } from 'lucide-react'
+import { MessageSquare, Zap, Split, List, Database } from 'lucide-react'
 
 export function TriggerNode({ data }: NodeProps) {
   return (
@@ -61,3 +61,44 @@ export function ConditionNode({ data }: NodeProps) {
     </Card>
   )
 }
+
+export function InteractiveListNode({ data }: NodeProps) {
+  return (
+    <Card className="w-[250px] border-purple-500/50 shadow-sm">
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-zinc-400" />
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-md text-purple-600 dark:text-purple-400">
+          <List className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm font-semibold">Interactive List</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-zinc-500 truncate">
+          {data.label as string || 'Options list...'}
+        </p>
+      </CardContent>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-zinc-400" />
+    </Card>
+  )
+}
+
+export function InputCaptureNode({ data }: NodeProps) {
+  return (
+    <Card className="w-[250px] border-indigo-500/50 shadow-sm">
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-zinc-400" />
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-4 pb-2">
+        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-md text-indigo-600 dark:text-indigo-400">
+          <Database className="w-4 h-4" />
+        </div>
+        <CardTitle className="text-sm font-semibold">Input Capture</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <p className="text-xs text-zinc-500 truncate">
+          Save response as: <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-[10px]">{data.variable as string || 'var'}</span>
+        </p>
+      </CardContent>
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-zinc-400" />
+    </Card>
+  )
+}
+

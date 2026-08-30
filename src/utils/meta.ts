@@ -84,3 +84,31 @@ export async function sendWhatsAppMessage(phoneNumberId: string, toPhone: string
   
   return data
 }
+
+export async function sendWhatsAppInteractiveMessage(phoneNumberId: string, toPhone: string, interactivePayload: any, token: string) {
+  console.log(`Sending WhatsApp interactive message to ${toPhone} via ${phoneNumberId}...`)
+  
+  const response = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: toPhone,
+      type: 'interactive',
+      interactive: interactivePayload
+    })
+  })
+
+  const data = await response.json()
+  
+  if (data.error) {
+    console.error('Meta API Error:', data.error)
+    throw new Error(data.error.message || 'Failed to send WhatsApp interactive message')
+  }
+  
+  return data
+}

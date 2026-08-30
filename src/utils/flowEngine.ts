@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/utils/supabase/admin'
-import { sendWhatsAppMessage } from './meta'
-import { debitWalletForMessage } from './billing'
+import { sendWhatsAppMessage, sendWhatsAppInteractiveMessage } from './meta'
+import { debitWalletForMessage, checkWalletBalance } from './billing'
 
 export async function executeFlow(tenantId: string, contactId: string, incomingMessageText: string, contactPhone: string) {
   const supabase = createAdminClient()
@@ -73,6 +73,25 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
       }).select().single()
       
       state = newState
+    } else if (state?.current_node_id) {
+      // If we are resuming from a node that captures input, process the input
+      const currentNode = nodes.find(n => n.id === state.current_node_id)
+      if (currentNode && (currentNode.type === 'inputCapture' || currentNode.type === 'InputCaptureNode')) {
+        const varName = currentNode.data?.variable || 'input'
+        
+        // Save the input to variables
+        const updatedVariables = { ...state.variables, [varName as string]: incomingMessageText }
+        
+        await supabase.from('conversation_states').update({
+          variables: updatedVariables
+        }).eq('id', state.id)
+        
+        state.variables = updatedVariables
+        
+        // Move to the next node and continue
+        const edge = edges.find(e => e.source === currentNode.id)
+        currentNodeId = edge ? edge.target : null
+      }
     }
 
     // 5. Execution Loop
@@ -104,6 +123,23 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
           .single()
 
         if (waConfig && waConfig.phone_number_id && waConfig.system_user_token) {
+          // Check billing BEFORE send
+          const hasBalance = await checkWalletBalance(tenantId, 'utility')
+          
+          if (!hasBalance) {
+            console.error(`Insufficient balance for tenant ${tenantId}. Message blocked.`)
+            
+            // Log as failed
+            await supabase.from('messages').insert({
+              contact_id: contactId,
+              direction: 'outbound',
+              content: messageText,
+              status: 'failed',
+              channel: 'whatsapp'
+            })
+            break // Stop flow execution
+          }
+
           try {
             await sendWhatsAppMessage(waConfig.phone_number_id, contactPhone, messageText, waConfig.system_user_token)
             
@@ -145,6 +181,79 @@ export async function executeFlow(tenantId: string, contactId: string, incomingM
           // We already used the incoming message in a previous node. We must stop and wait for a new message.
           break
         }
+      }
+      else if (currentNode.type === 'inputCapture' || currentNode.type === 'InputCaptureNode') {
+        // Stop execution and wait for next user message
+        // The message will be captured in the next execution run
+        break
+      }
+      else if (currentNode.type === 'interactiveList' || currentNode.type === 'InteractiveListNode') {
+        // Send WhatsApp Interactive Message
+        const messageText = currentNode.data?.label || 'Please select an option'
+        
+        // Parse options from data (assumes a comma separated string for simplicity in MVP, e.g. "Dr. Smith, Dr. Jones, Dr. Brown")
+        const optionsStr = currentNode.data?.options || 'Option 1, Option 2, Option 3'
+        const optionsList = (optionsStr as string).split(',').map(s => s.trim()).slice(0, 10) // Max 10 options for WhatsApp list
+        
+        // Construct interactive payload
+        const interactivePayload = {
+          type: "list",
+          header: { type: "text", text: "Options" },
+          body: { text: messageText },
+          footer: { text: "Select an item below" },
+          action: {
+            button: "Select",
+            sections: [
+              {
+                title: "Available Options",
+                rows: optionsList.map((opt, i) => ({
+                  id: `opt_${i}`,
+                  title: opt.substring(0, 24) // WhatsApp title limit is 24 chars
+                }))
+              }
+            ]
+          }
+        }
+
+        // Get tenant WhatsApp config
+        const { data: waConfig } = await supabase
+          .from('tenant_whatsapp_configs')
+          .select('phone_number_id, system_user_token')
+          .eq('tenant_id', tenantId)
+          .single()
+
+        if (waConfig && waConfig.phone_number_id && waConfig.system_user_token) {
+          // Check billing BEFORE send
+          const hasBalance = await checkWalletBalance(tenantId, 'utility')
+          
+          if (!hasBalance) {
+            console.error(`Insufficient balance for tenant ${tenantId}. Message blocked.`)
+            // Log as failed
+            await supabase.from('messages').insert({
+              contact_id: contactId, direction: 'outbound', content: messageText, status: 'failed', channel: 'whatsapp'
+            })
+            break // Stop flow execution
+          }
+
+          try {
+            await sendWhatsAppInteractiveMessage(waConfig.phone_number_id, contactPhone, interactivePayload, waConfig.system_user_token)
+            
+            // Log outbound message
+            const { data: msgRec } = await supabase.from('messages').insert({
+              contact_id: contactId, direction: 'outbound', content: messageText, status: 'sent', channel: 'whatsapp'
+            }).select('id').single()
+
+            if (msgRec) {
+              await debitWalletForMessage(tenantId, msgRec.id, 'utility')
+            }
+          } catch (err) {
+            console.error('Failed to send interactive node:', err)
+          }
+        }
+
+        // Move to next node
+        const edge = edges.find(e => e.source === currentNode.id)
+        nextNodeId = edge ? edge.target : null
       }
 
       // Advance

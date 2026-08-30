@@ -15,7 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import { TriggerNode, MessageNode, ConditionNode } from '@/components/flow/nodes'
+import { TriggerNode, MessageNode, ConditionNode, InteractiveListNode, InputCaptureNode } from '@/components/flow/nodes'
 import { useFlowStore } from '@/stores/flowStore'
 import { Button } from '@/components/ui/button'
 import { saveFlowVersion } from '@/app/actions/flows'
@@ -24,6 +24,8 @@ const nodeTypes = {
   trigger: TriggerNode,
   message: MessageNode,
   condition: ConditionNode,
+  interactiveList: InteractiveListNode,
+  inputCapture: InputCaptureNode,
 }
 
 // Initial nodes if the flow is empty
@@ -68,6 +70,8 @@ export default function FlowBuilder({ initialFlowState, flowId }: { initialFlowS
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handleAddNode('message')}>+ Message</Button>
           <Button variant="outline" onClick={() => handleAddNode('condition')}>+ Condition</Button>
+          <Button variant="outline" onClick={() => handleAddNode('interactiveList')}>+ List</Button>
+          <Button variant="outline" onClick={() => handleAddNode('inputCapture')}>+ Input</Button>
         </div>
         <Button onClick={handleSave}>Save Flow</Button>
       </div>
