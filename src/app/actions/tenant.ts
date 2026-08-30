@@ -54,6 +54,70 @@ const FLOW_TEMPLATES: Record<string, { name: string, nodes: any[], edges: any[] 
       { id: 'e3', source: 'cond-order', target: 'msg-catalog', sourceHandle: 'true' },
       { id: 'e4', source: 'cond-order', target: 'msg-fallback', sourceHandle: 'false' },
     ]
+  },
+  health_diagnostic_lab: {
+    name: 'Diagnostic Lab Flow',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'When patient messages' } },
+      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '🔬 Welcome to {business}!\n\n1️⃣ Book a test\n2️⃣ Get reports\n3️⃣ Support' } },
+      { id: 'cond-book', type: 'condition', position: { x: 250, y: 370 }, data: { label: 'book' } },
+      { id: 'msg-prescription', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Please upload a clear photo of your doctor\'s prescription, and we will schedule your test.' } },
+      { id: 'msg-fallback', type: 'message', position: { x: 450, y: 530 }, data: { label: 'Thank you! Our lab technicians will assist you shortly.' } },
+    ],
+    edges: [
+      { id: 'e1', source: 'trigger-1', target: 'msg-welcome' },
+      { id: 'e2', source: 'msg-welcome', target: 'cond-book' },
+      { id: 'e3', source: 'cond-book', target: 'msg-prescription', sourceHandle: 'true' },
+      { id: 'e4', source: 'cond-book', target: 'msg-fallback', sourceHandle: 'false' },
+    ]
+  },
+  health_dental: {
+    name: 'Dental Clinic Flow',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'When patient messages' } },
+      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '🦷 Welcome to {business}!\n\n1️⃣ Book appointment\n2️⃣ Emergency\n3️⃣ Contact us' } },
+      { id: 'cond-book', type: 'condition', position: { x: 250, y: 370 }, data: { label: 'book' } },
+      { id: 'msg-intent', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Is this for a routine cleaning or a specific dental issue?' } },
+      { id: 'msg-fallback', type: 'message', position: { x: 450, y: 530 }, data: { label: 'Our dental staff will get back to you shortly!' } },
+    ],
+    edges: [
+      { id: 'e1', source: 'trigger-1', target: 'msg-welcome' },
+      { id: 'e2', source: 'msg-welcome', target: 'cond-book' },
+      { id: 'e3', source: 'cond-book', target: 'msg-intent', sourceHandle: 'true' },
+      { id: 'e4', source: 'cond-book', target: 'msg-fallback', sourceHandle: 'false' },
+    ]
+  },
+  beauty: { // base for beauty
+    name: 'Salon & Spa Flow',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'When client messages' } },
+      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '✨ Welcome to {business}!\n\n1️⃣ Book a service\n2️⃣ See pricing\n3️⃣ Location' } },
+      { id: 'cond-book', type: 'condition', position: { x: 250, y: 370 }, data: { label: 'book' } },
+      { id: 'msg-stylist', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Which stylist or therapist would you like to book with?' } },
+      { id: 'msg-fallback', type: 'message', position: { x: 450, y: 530 }, data: { label: 'Our front desk will be right with you!' } },
+    ],
+    edges: [
+      { id: 'e1', source: 'trigger-1', target: 'msg-welcome' },
+      { id: 'e2', source: 'msg-welcome', target: 'cond-book' },
+      { id: 'e3', source: 'cond-book', target: 'msg-stylist', sourceHandle: 'true' },
+      { id: 'e4', source: 'cond-book', target: 'msg-fallback', sourceHandle: 'false' },
+    ]
+  },
+  home: { // base for home services
+    name: 'Home Services Flow',
+    nodes: [
+      { id: 'trigger-1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'When customer messages' } },
+      { id: 'msg-welcome', type: 'message', position: { x: 250, y: 200 }, data: { label: '🛠️ Welcome to {business}!\n\n1️⃣ Request service\n2️⃣ Get a quote\n3️⃣ Support' } },
+      { id: 'cond-book', type: 'condition', position: { x: 250, y: 370 }, data: { label: 'service' } },
+      { id: 'msg-issue', type: 'message', position: { x: 80, y: 530 }, data: { label: 'Please describe the issue you need help with, and upload a photo if possible.' } },
+      { id: 'msg-fallback', type: 'message', position: { x: 450, y: 530 }, data: { label: 'Our team will contact you soon.' } },
+    ],
+    edges: [
+      { id: 'e1', source: 'trigger-1', target: 'msg-welcome' },
+      { id: 'e2', source: 'msg-welcome', target: 'cond-book' },
+      { id: 'e3', source: 'cond-book', target: 'msg-issue', sourceHandle: 'true' },
+      { id: 'e4', source: 'cond-book', target: 'msg-fallback', sourceHandle: 'false' },
+    ]
   }
 }
 
@@ -66,7 +130,8 @@ export async function createTenant(formData: FormData) {
   }
 
   const businessName = formData.get('businessName') as string
-  const vertical = formData.get('vertical') as string || 'restaurant'
+  const vertical = formData.get('vertical') as string || 'health'
+  const subCategory = formData.get('subCategory') as string || ''
   
   if (!businessName || businessName.length < 2) {
     return { error: 'Business name is required' }
@@ -104,8 +169,10 @@ export async function createTenant(formData: FormData) {
     return { error: 'Failed to set up permissions.' }
   }
 
-  // 3. Seed a default flow for the selected vertical
-  const template = FLOW_TEMPLATES[vertical] || FLOW_TEMPLATES.restaurant
+  // 3. Seed a default flow for the selected vertical/subcategory
+  const templateKey = subCategory ? `${vertical}_${subCategory}` : vertical
+  // Fallback chain: specific subcategory -> generic vertical -> default restaurant
+  const template = FLOW_TEMPLATES[templateKey] || FLOW_TEMPLATES[vertical] || FLOW_TEMPLATES.health || FLOW_TEMPLATES.restaurant
   const flowName = template.name.replace('{business}', businessName)
 
   const { data: flow } = await adminAuth
