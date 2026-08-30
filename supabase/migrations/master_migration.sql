@@ -245,33 +245,7 @@ CREATE POLICY "Users can delete whatsapp config of their tenants"
   USING (public.user_belongs_to_tenant(tenant_id));
 -- Omnirelay Phase 4: CRM (Contacts & Messages) and Restaurant Bookings Schema
 
--- 1. Contacts Table
-CREATE TABLE public.contacts (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id uuid REFERENCES public.tenants(id) ON DELETE CASCADE NOT NULL,
-  phone_number text NOT NULL,
-  name text,
-  tags text[] DEFAULT '{}'::text[],
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  UNIQUE(tenant_id, phone_number)
-);
 
--- Enable RLS
-ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
-
--- 2. Messages Table
-CREATE TABLE public.messages (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  contact_id uuid REFERENCES public.contacts(id) ON DELETE CASCADE NOT NULL,
-  direction text CHECK (direction IN ('inbound', 'outbound')) NOT NULL,
-  content text NOT NULL,
-  status text CHECK (status IN ('received', 'sent', 'delivered', 'read', 'failed')) DEFAULT 'received',
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Enable RLS
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
 -- 3. Restaurant Bookings Table
 CREATE TABLE public.restaurant_bookings (
@@ -293,63 +267,6 @@ ALTER TABLE public.restaurant_bookings ENABLE ROW LEVEL SECURITY;
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- --------------------------------------------------------
 
--- Contacts Policies
-CREATE POLICY "Users can view contacts of their tenants"
-  ON public.contacts FOR SELECT
-  USING (public.user_belongs_to_tenant(tenant_id));
-
-CREATE POLICY "Users can insert contacts to their tenants"
-  ON public.contacts FOR INSERT
-  WITH CHECK (public.user_belongs_to_tenant(tenant_id));
-
-CREATE POLICY "Users can update contacts of their tenants"
-  ON public.contacts FOR UPDATE
-  USING (public.user_belongs_to_tenant(tenant_id));
-
-CREATE POLICY "Users can delete contacts of their tenants"
-  ON public.contacts FOR DELETE
-  USING (public.user_belongs_to_tenant(tenant_id));
-
--- Messages Policies
-CREATE POLICY "Users can view messages of their tenants"
-  ON public.messages FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.contacts
-      WHERE id = public.messages.contact_id
-      AND public.user_belongs_to_tenant(tenant_id)
-    )
-  );
-
-CREATE POLICY "Users can insert messages to their tenants"
-  ON public.messages FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.contacts
-      WHERE id = public.messages.contact_id
-      AND public.user_belongs_to_tenant(tenant_id)
-    )
-  );
-
-CREATE POLICY "Users can update messages of their tenants"
-  ON public.messages FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.contacts
-      WHERE id = public.messages.contact_id
-      AND public.user_belongs_to_tenant(tenant_id)
-    )
-  );
-
-CREATE POLICY "Users can delete messages of their tenants"
-  ON public.messages FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.contacts
-      WHERE id = public.messages.contact_id
-      AND public.user_belongs_to_tenant(tenant_id)
-    )
-  );
 
 -- Restaurant Bookings Policies
 CREATE POLICY "Users can view bookings of their tenants"
@@ -753,36 +670,7 @@ CREATE POLICY "Users can delete api keys of their tenants"
   ON public.tenant_api_keys FOR DELETE
   USING (public.user_belongs_to_tenant(tenant_id));
 
--- --------------------------------------------------------
--- Omnirelay Phase 2: Retail Orders Schema
--- --------------------------------------------------------
 
-CREATE TABLE public.retail_orders (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id uuid REFERENCES public.tenants(id) ON DELETE CASCADE NOT NULL,
-  customer_phone text NOT NULL,
-  order_details jsonb NOT NULL DEFAULT '{}'::jsonb,
-  total_amount numeric(10, 2) DEFAULT 0.00,
-  status text CHECK (status IN ('pending', 'paid', 'shipped', 'cancelled')) NOT NULL DEFAULT 'pending',
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Enable RLS
-ALTER TABLE public.retail_orders ENABLE ROW LEVEL SECURITY;
-
--- Policies
-CREATE POLICY "Users can view their tenant retail orders"
-  ON public.retail_orders FOR SELECT
-  USING (public.user_belongs_to_tenant(tenant_id));
-
-CREATE POLICY "Users can insert retail orders for their tenant"
-  ON public.retail_orders FOR INSERT
-  WITH CHECK (public.user_belongs_to_tenant(tenant_id));
-
-CREATE POLICY "Users can update their tenant retail orders"
-  ON public.retail_orders FOR UPDATE
-  USING (public.user_belongs_to_tenant(tenant_id));
 
 -- --------------------------------------------------------
 -- Omnirelay Phase 11: Conversation State Schema
