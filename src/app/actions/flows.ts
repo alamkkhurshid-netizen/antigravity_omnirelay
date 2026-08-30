@@ -79,3 +79,40 @@ export async function saveFlowVersion(flowId: string, nodes: any[], edges: any[]
   revalidatePath(`/dashboard/flows/${flowId}`)
   return { success: true }
 }
+
+export async function toggleFlowStatus(flowId: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  // Get current flow
+  const { data: flow } = await supabase
+    .from('flows')
+    .select('id, status, tenant_id')
+    .eq('id', flowId)
+    .single()
+
+  if (!flow) return { error: 'Flow not found' }
+
+  const newStatus = flow.status === 'active' ? 'draft' : 'active'
+
+  // If activating, deactivate all other flows for this tenant first
+  if (newStatus === 'active') {
+    await supabase
+      .from('flows')
+      .update({ status: 'draft', updated_at: new Date().toISOString() })
+      .eq('tenant_id', flow.tenant_id)
+      .eq('status', 'active')
+  }
+
+  const { error } = await supabase
+    .from('flows')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', flowId)
+
+  if (error) return { error: 'Failed to update flow status' }
+
+  revalidatePath('/dashboard/flows')
+  return { success: true, newStatus }
+}

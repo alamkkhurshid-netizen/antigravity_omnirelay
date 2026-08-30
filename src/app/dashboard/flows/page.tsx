@@ -2,7 +2,9 @@ import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { createFlow } from '@/app/actions/flows'
+import { FlowStatusToggle } from '@/components/flow/FlowStatusToggle'
 import Link from 'next/link'
 
 export default async function FlowsPage() {
@@ -10,7 +12,6 @@ export default async function FlowsPage() {
 
   const { data: { user } } = await supabase.auth.getUser()
   
-  // RLS will automatically filter this down to just the tenant's flows
   const { data: flows } = await supabase
     .from('flows')
     .select('*')
@@ -41,22 +42,28 @@ export default async function FlowsPage() {
         
         {/* List existing flows */}
         {flows?.map((flow) => (
-          <Card key={flow.id}>
+          <Card key={flow.id} className={flow.status === 'active' ? 'border-green-500/50 ring-1 ring-green-500/20' : ''}>
             <CardHeader>
-              <CardTitle>{flow.name}</CardTitle>
-              <CardDescription className="capitalize">
-                Status: {flow.status}
+              <div className="flex items-center justify-between">
+                <CardTitle>{flow.name}</CardTitle>
+                <Badge variant={flow.status === 'active' ? 'default' : 'secondary'} className={flow.status === 'active' ? 'bg-green-600' : ''}>
+                  {flow.status}
+                </Badge>
+              </div>
+              <CardDescription>
+                Created: {new Date(flow.created_at).toLocaleDateString()}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-zinc-500">
-                Created: {new Date(flow.created_at).toLocaleDateString()}
+                Last updated: {new Date(flow.updated_at).toLocaleDateString()}
               </p>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full">
-                <Link href={`/dashboard/flows/${flow.id}`}>Open Builder</Link>
-              </Button>
+            <CardFooter className="flex gap-2">
+              <Link href={`/dashboard/flows/${flow.id}`} className="flex-1">
+                <Button variant="outline" className="w-full">Open Builder</Button>
+              </Link>
+              <FlowStatusToggle flowId={flow.id} currentStatus={flow.status} />
             </CardFooter>
           </Card>
         ))}
