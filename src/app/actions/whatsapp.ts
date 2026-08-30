@@ -1,55 +1,49 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { exchangeTokenForSystemUser, subscribeAppToWaba } from '@/utils/meta'
-import { revalidatePath } from 'next/cache'
 
-export async function connectWhatsAppAccount(
-  wabaId: string, 
-  phoneNumberId: string, 
-  accessToken: string
-) {
+export async function saveWhatsAppConfig(code: string, tenantId?: string) {
+  if (!tenantId) {
+    return { success: false, error: 'No tenant specified' }
+  }
+
   const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  // Get tenant ID
-  const { data: members } = await supabase
-    .from('tenant_members')
-    .select('tenant_id')
-    .eq('user_id', user.id)
-    .limit(1)
-
-  if (!members || members.length === 0) return { error: 'No tenant found' }
-  const tenant_id = members[0].tenant_id
 
   try {
-    // 1. Exchange the token (Mocked)
-    const systemUserToken = await exchangeTokenForSystemUser(accessToken)
+    // 1. Exchange the OAuth code for an access token
+    // In Meta Embedded Signup, the response is often an OAuth code that you exchange for a system user token.
+    // For MVP simulation, we assume the frontend already obtained the token or we do the exchange here.
+    // For now, this is a placeholder where you would call the Meta Graph API to exchange the token and get the WABA ID.
+    
+    console.log('Received auth code from Meta:', code)
 
-    // 2. Subscribe Webhooks (Mocked)
-    await subscribeAppToWaba(wabaId, systemUserToken)
+    // TODO: 
+    // const tokenResponse = await fetch(`https://graph.facebook.com/v20.0/oauth/access_token?...`)
+    // const systemUserToken = tokenResponse.access_token
 
-    // 3. Save to database
+    // Mocking the successful fetch of phone number ID and token for MVP
+    const mockPhoneNumberId = '1234567890' 
+    const mockSystemUserToken = code 
+    const mockWabaId = '0987654321'
+
     const { error } = await supabase
       .from('tenant_whatsapp_configs')
       .upsert({
-        tenant_id,
-        waba_id: wabaId,
-        phone_number_id: phoneNumberId,
-        access_token: accessToken,
-        system_user_token: systemUserToken,
+        tenant_id: tenantId,
+        phone_number_id: mockPhoneNumberId,
+        waba_id: mockWabaId,
+        system_user_token: mockSystemUserToken,
         updated_at: new Date().toISOString()
       }, { onConflict: 'tenant_id' })
 
-    if (error) throw error
+    if (error) {
+      console.error('DB Error saving whatsapp config:', error)
+      return { success: false, error: error.message }
+    }
 
-    revalidatePath('/dashboard/settings')
     return { success: true }
-    
-  } catch (error) {
-    console.error('Failed to connect WhatsApp account:', error)
-    return { error: 'Failed to connect account. Please try again.' }
+  } catch (err: any) {
+    console.error('Failed to save whatsapp config:', err)
+    return { success: false, error: err.message || 'Unknown error' }
   }
 }
