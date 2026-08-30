@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { executeFlow } from '@/utils/flowEngine'
 
 // GET handler for Meta Webhook Verification
 export async function GET(request: Request) {
@@ -73,77 +74,9 @@ export async function POST(request: Request) {
                 status: 'received'
               })
 
-            // 4. Trigger MVP Flow Logic (Simulating Restaurant Booking)
-            const textLower = messageText.toLowerCase()
-            if (textLower.includes('book') || textLower.includes('reservation') || textLower.includes('table')) {
-              // Create a pending booking for tomorrow at 19:00 for 2 people
-              const tomorrow = new Date()
-              tomorrow.setDate(tomorrow.getDate() + 1)
-              
-              await supabase
-                .from('restaurant_bookings')
-                .insert({
-                  tenant_id: tenantId,
-                  contact_id: contact.id,
-                  booking_date: tomorrow.toISOString().split('T')[0],
-                  booking_time: '19:00:00',
-                  party_size: 2,
-                  status: 'pending'
-                })
-                
-              console.log(`[Flow Engine] Restaurant booking requested by ${contactPhone}.`)
-            }
-            // 5. Trigger MVP Flow Logic (Simulating Clinic Appointment)
-            else if (textLower.includes('doctor') || textLower.includes('appointment')) {
-              // Find first doctor for this tenant
-              const { data: firstDoctor } = await supabase
-                .from('doctors')
-                .select('id')
-                .eq('tenant_id', tenantId)
-                .limit(1)
-                .single()
-
-              if (firstDoctor) {
-                const tomorrow = new Date()
-                tomorrow.setDate(tomorrow.getDate() + 1)
-                
-                await supabase
-                  .from('clinic_appointments')
-                  .insert({
-                    tenant_id: tenantId,
-                    contact_id: contact.id,
-                    doctor_id: firstDoctor.id,
-                    appointment_date: tomorrow.toISOString().split('T')[0],
-                    appointment_time: '10:00:00',
-                    status: 'pending'
-                  })
-                  
-                console.log(`[Flow Engine] Clinic appointment requested by ${contactPhone}.`)
-              }
-            }
-            // 6. Trigger MVP Flow Logic (Simulating Retail Order)
-            else if (textLower.includes('buy') || textLower.includes('order')) {
-              const orderNum = Math.floor(1000 + Math.random() * 9000).toString()
-              
-              await supabase
-                .from('retail_orders')
-                .insert({
-                  tenant_id: tenantId,
-                  contact_id: contact.id,
-                  order_number: `ORD-${orderNum}`,
-                  total_amount: 1499.00,
-                  payment_status: 'pending',
-                  shipping_status: 'processing'
-                })
-                
-              console.log(`[Flow Engine] Retail order ${orderNum} placed by ${contactPhone}.`)
-            }
-            
-            // Note for Phase 8 (Billing): 
-            // In a production environment, immediately after this block where the AI/Flow Engine 
-            // generates an OUTBOUND reply message, we would call our billing service to debit the 
-            // `tenant_wallets` table by ₹0.92 for Marketing or ₹0.14 for Utility, and insert 
-            // a record into `message_ledger`.
+            // 4. Trigger Actual Flow Engine
+            console.log(`[Flow Engine] Executing flow for ${contactPhone}...`)
+            await executeFlow(tenantId, contact.id, messageText, contactPhone)
           }
         }
       }

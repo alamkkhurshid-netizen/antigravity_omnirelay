@@ -8,21 +8,79 @@
  */
 
 export async function exchangeTokenForSystemUser(accessToken: string) {
-  // Mock API call to Meta to exchange the OAuth token for a long-lived system user token
+  // Exchange standard OAuth token for a long-lived System User token (Embedded Signup flow)
   console.log('Exchanging OAuth token for System User Token...')
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  const appId = process.env.META_APP_ID
+  const appSecret = process.env.META_APP_SECRET
   
-  // Return a mock token for local development
-  return `mock_system_user_token_${Date.now()}`
+  if (!appId || !appSecret) {
+    throw new Error('Missing META_APP_ID or META_APP_SECRET in environment')
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${accessToken}`
+  )
+
+  const data = await response.json()
+  
+  if (data.error) {
+    throw new Error(data.error.message || 'Failed to exchange token')
+  }
+
+  return data.access_token as string
 }
 
 export async function subscribeAppToWaba(wabaId: string, systemUserToken: string) {
-  // Mock API call to Meta to subscribe the current App to the client's WABA
   console.log(`Subscribing App to WABA: ${wabaId}...`)
   
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  const response = await fetch(
+    `https://graph.facebook.com/v19.0/${wabaId}/subscribed_apps`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${systemUserToken}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+  const data = await response.json()
   
-  return { success: true }
+  if (data.error) {
+    throw new Error(data.error.message || 'Failed to subscribe app to WABA')
+  }
+
+  return data
+}
+
+export async function sendWhatsAppMessage(phoneNumberId: string, toPhone: string, messageText: string, token: string) {
+  console.log(`Sending WhatsApp message to ${toPhone} via ${phoneNumberId}...`)
+  
+  const response = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: toPhone,
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: messageText
+      }
+    })
+  })
+
+  const data = await response.json()
+  
+  if (data.error) {
+    console.error('Meta API Error:', data.error)
+    throw new Error(data.error.message || 'Failed to send WhatsApp message')
+  }
+  
+  return data
 }

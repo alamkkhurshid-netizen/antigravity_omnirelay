@@ -1,0 +1,169 @@
+import { createAdminClient } from '@/utils/supabase/admin'
+import { sendWhatsAppMessage } from './meta'
+import { debitWalletForMessage } from './billing'
+
+export async function executeFlow(tenantId: string, contactId: string, incomingMessageText: string, contactPhone: string) {
+  const supabase = createAdminClient()
+
+  try {
+    // 1. Get Conversation State
+    let { data: state } = await supabase
+      .from('conversation_states')
+      .select('*')
+      .eq('contact_id', contactId)
+      .single()
+
+    let flowId = state?.active_flow_id
+    let currentNodeId = state?.current_node_id
+    let isNewFlow = false
+
+    // 2. If no state, find the active flow for the tenant
+    if (!state) {
+      const { data: activeFlow } = await supabase
+        .from('flows')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!activeFlow) {
+        console.log(`No active flow found for tenant ${tenantId}. Ignoring message.`)
+        return
+      }
+
+      flowId = activeFlow.id
+      isNewFlow = true
+    }
+
+    // 3. Load Flow Version (nodes & edges)
+    const { data: flowVersion } = await supabase
+      .from('flow_versions')
+      .select('nodes, edges')
+      .eq('flow_id', flowId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (!flowVersion) {
+      console.error(`Flow version not found for flow ${flowId}`)
+      return
+    }
+
+    const nodes = flowVersion.nodes as any[]
+    const edges = flowVersion.edges as any[]
+
+    // 4. Determine starting point
+    if (isNewFlow) {
+      const triggerNode = nodes.find(n => n.type === 'trigger' || n.type === 'TriggerNode')
+      if (!triggerNode) {
+        console.error('No trigger node found in flow.')
+        return
+      }
+      currentNodeId = triggerNode.id
+      
+      // Upsert new state
+      const { data: newState } = await supabase.from('conversation_states').upsert({
+        tenant_id: tenantId,
+        contact_id: contactId,
+        active_flow_id: flowId,
+        current_node_id: currentNodeId,
+        variables: {}
+      }).select().single()
+      
+      state = newState
+    }
+
+    // 5. Execution Loop
+    let hasConsumedInput = false
+    let maxSteps = 20 // prevent infinite loops
+    let steps = 0
+
+    while (currentNodeId && steps < maxSteps) {
+      steps++
+      const currentNode = nodes.find(n => n.id === currentNodeId)
+      if (!currentNode) break
+
+      let nextNodeId: string | null = null
+
+      if (currentNode.type === 'trigger' || currentNode.type === 'TriggerNode') {
+        // Just move to the next connected node
+        const edge = edges.find(e => e.source === currentNode.id)
+        nextNodeId = edge ? edge.target : null
+      } 
+      else if (currentNode.type === 'message' || currentNode.type === 'MessageNode') {
+        // Send WhatsApp Message
+        const messageText = currentNode.data?.label || 'Hello!'
+        
+        // Get tenant WhatsApp config
+        const { data: waConfig } = await supabase
+          .from('tenant_whatsapp_configs')
+          .select('phone_number_id, system_user_token')
+          .eq('tenant_id', tenantId)
+          .single()
+
+        if (waConfig && waConfig.phone_number_id && waConfig.system_user_token) {
+          try {
+            await sendWhatsAppMessage(waConfig.phone_number_id, contactPhone, messageText, waConfig.system_user_token)
+            
+            // Log outbound message
+            const { data: msgRec } = await supabase.from('messages').insert({
+              contact_id: contactId,
+              direction: 'outbound',
+              content: messageText,
+              status: 'sent',
+              channel: 'whatsapp'
+            }).select('id').single()
+
+            if (msgRec) {
+              await debitWalletForMessage(tenantId, msgRec.id, 'utility')
+            }
+          } catch (err) {
+            console.error('Failed to send message node:', err)
+          }
+        }
+
+        // Move to next node
+        const edge = edges.find(e => e.source === currentNode.id)
+        nextNodeId = edge ? edge.target : null
+      }
+      else if (currentNode.type === 'condition' || currentNode.type === 'ConditionNode') {
+        if (!hasConsumedInput) {
+          // Evaluate condition against incomingMessageText
+          const conditionText = (currentNode.data?.label || '').toLowerCase()
+          const isMatch = incomingMessageText.toLowerCase().includes(conditionText)
+          
+          hasConsumedInput = true
+          
+          // Find the correct edge based on true/false handle
+          const sourceHandle = isMatch ? 'true' : 'false'
+          const edge = edges.find(e => e.source === currentNode.id && e.sourceHandle === sourceHandle)
+          
+          nextNodeId = edge ? edge.target : null
+        } else {
+          // We already used the incoming message in a previous node. We must stop and wait for a new message.
+          break
+        }
+      }
+
+      // Advance
+      currentNodeId = nextNodeId
+    }
+
+    // 6. Finalize State
+    if (currentNodeId) {
+      // Save state to resume later
+      await supabase.from('conversation_states').update({
+        current_node_id: currentNodeId,
+        updated_at: new Date().toISOString()
+      }).eq('id', state.id)
+    } else {
+      // Flow completed, clear state
+      await supabase.from('conversation_states').delete().eq('id', state.id)
+    }
+
+  } catch (error) {
+    console.error('Flow Execution Error:', error)
+  }
+}
